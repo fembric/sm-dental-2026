@@ -1,0 +1,1 @@
+{"name":"sm-dental-2026","version":"1.0.0","private":true,"type":"module","scripts":{"build":"node build.mjs","start":"node serve.mjs","check":"node check.mjs"}}

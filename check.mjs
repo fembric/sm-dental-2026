@@ -1,0 +1,8 @@
+import {readdir,readFile,stat} from 'node:fs/promises';
+import path from 'node:path';
+import {outputDir as root} from './site-config.mjs';
+const {basePath}=JSON.parse(await readFile(path.join(root,'build-info.json'),'utf8')); 
+async function walk(dir){const list=await readdir(dir,{withFileTypes:true});return(await Promise.all(list.map(e=>e.isDirectory()?walk(path.join(dir,e.name)):path.join(dir,e.name)))).flat()}
+const files=(await walk(root)).filter(f=>f.endsWith('.html'));const failures=[];const titles=new Set();let links=0;
+for(const file of files){const html=await readFile(file,'utf8');const relative=path.relative(root,file);const title=html.match(/<title>(.*?)<\/title>/)?.[1];if(!title||titles.has(title))failures.push(`${relative}: missing or duplicate title`);titles.add(title);if((html.match(/<h1[ >]/g)||[]).length!==1)failures.push(`${relative}: expected one h1`);if(!html.includes('name="description"'))failures.push(`${relative}: missing description`);for(const [,url]of html.matchAll(/(?:href|src)="([^"#]+)"/g)){if(!url.startsWith('/')||url.startsWith('//'))continue;links++;if(basePath&&!url.startsWith(basePath+'/')){failures.push(`${relative}: URL escapes Pages prefix: ${url}`);continue;}let target=path.join(root,url.slice(basePath.length).replace(/^\//,''));if(url.endsWith('/'))target=path.join(target,'index.html');try{await stat(target)}catch{failures.push(`${relative}: missing ${url}`)}}for(const [,img]of html.matchAll(/<img\s([^>]+)>/g)){if(!img.includes('alt="'))failures.push(`${relative}: image missing alt`)}}
+if(failures.length){console.error(failures.join('\n'));process.exit(1)}console.log(`PASS: ${files.length} HTML documents, ${links} internal references, unique titles, descriptions, image alt text, one H1 per page.`);
