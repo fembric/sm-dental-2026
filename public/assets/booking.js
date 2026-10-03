@@ -64,7 +64,9 @@
       const rows = read();
       if (rows.length >= 100) { announce('Сохранено 100 заявок. Скачайте копию и удалите ненужные перед добавлением новой.', true); return; }
       // Intentionally no slot reservation: availability belongs to the future backend.
-      rows.push({ id: crypto.randomUUID(), name, phone, date, time, timezone: 'Europe/Moscow', context: dialog.querySelector('.dialog-context').textContent, status: 'local-draft', createdAt: new Date().toISOString() });
+      // randomUUID is HTTPS-only; getRandomValues also works on an HTTP preview.
+      const id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint32Array(4)), value => value.toString(16).padStart(8, '0')).join('-');
+      rows.push({ id, name, phone, date, time, timezone: 'Europe/Moscow', context: dialog.querySelector('.dialog-context').textContent, status: 'local-draft', createdAt: new Date().toISOString() });
       write(rows); form.reset(); updateRange(); render();
       announce('Заявка сохранена на этом устройстве. В клинику она не отправлена. Позвоните, чтобы подтвердить дату и время.');
       dialog.querySelector('.saved-bookings').open = true;
